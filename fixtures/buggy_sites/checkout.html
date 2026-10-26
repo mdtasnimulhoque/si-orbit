@@ -1,0 +1,59 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SI ORBIT — Checkout Test</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 600px;
+      margin: 60px auto;
+      padding: 24px;
+      color: #1f2937;
+      background: #f3f4f6;
+    }
+
+    .card {
+      background: white;
+      padding: 28px;
+      border-radius: 12px;
+      box-shadow: 0 4px 16px #00000012;
+    }
+
+    button {
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: 8px;
+      background: #2563eb;
+      color: white;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    #message {
+      margin-top: 16px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Checkout</h1>
+    <p>Demo order total: $49.00</p>
+    <button id="checkout-button" onclick="completeCheckout()">
+      Complete purchase
+    </button>
+    <p id="message" aria-live="polite"></p>
+  </div>
+
+  <script>
+    function completeCheckout() {
+      const message = document.getElementById("checkout-message");
+      message.textContent = "Purchase completed successfully!";
+    }
+  </script>
+</body>
+</html>
