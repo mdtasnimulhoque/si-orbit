@@ -4,3 +4,5 @@ uvicorn[standard]
 playwright
 pytest
 httpx
+
+python-dotenv
