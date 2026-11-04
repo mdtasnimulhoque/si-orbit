@@ -1,16 +1,31 @@
-
-# Python virtual environment
+# Python virtual environments
 .venv/
+.studio-venv/
+venv/
 
-# Python-generated cache files
+# Python cache and test artifacts
 __pycache__/
 *.py[cod]
-
-# Test cache
 .pytest_cache/
+.coverage
+htmlcov/
 
-# Environment variables and secrets
+# Secrets
 .env
+.env.*
+!.env.example
 
-# macOS files
+# macOS
 .DS_Store
+
+# Local backups and temporary files
+*.backup
+*.before-*
+*.disk-backup
+*.merged-candidate
+*.unsaved-copy
+
+# Demo production assets (kept locally)
+studio/audio/
+studio/captures/
+*.pre-merge-backup

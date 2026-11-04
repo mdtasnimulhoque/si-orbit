@@ -1,4 +1,3 @@
-
 const form = document.getElementById("investigation-form");
 const runButton = document.getElementById("run-button");
 const runButtonText = document.getElementById("run-button-text");
@@ -113,9 +112,6 @@ function updateInvestigationMode() {
     runButtonText.textContent = "Run investigation";
   }
 
-  if (customMode) {
-    enableAiReasoning.checked = false;
-  }
 }
 
 function setLoading(isLoading) {
@@ -132,9 +128,9 @@ function setLoading(isLoading) {
       ? "Analyze evidence"
       : "Run investigation";
 
-  resultsStatus.textContent = isLoading
-    ? "INVESTIGATION RUNNING"
-    : "AWAITING INVESTIGATION";
+  if (isLoading) {
+    resultsStatus.textContent = "INVESTIGATION RUNNING";
+  }
 
   resultsStatus.classList.toggle("is-running", isLoading);
 }
@@ -396,7 +392,149 @@ function renderVerification(fixVerification, report) {
   }
 }
 
-function renderAiReasoning(reasoning = {}) {
+function renderAiReasoning(reasoning = {}, repairCycle = null) {
+  aiReasoningOutput.replaceChildren();
+
+  const isRepairCycle = repairCycle && typeof repairCycle === "object";
+
+  if (isRepairCycle) {
+    const attempts = Array.isArray(repairCycle.attempts)
+      ? repairCycle.attempts
+      : [];
+
+    const modelAttempt = attempts.find((item) => item.decision);
+
+    aiReasoningStatus.textContent = repairCycle.model_generated
+      ? "Muse Spark generated a repair proposal."
+      : "No model-generated repair proposal was recorded.";
+
+    addTextElement(
+      aiReasoningOutput,
+      "p",
+      "mini-label",
+      "META MUSE SPARK · MODEL DECISION",
+    );
+
+    addTextElement(
+      aiReasoningOutput,
+      "p",
+      "repair-decision",
+      modelAttempt?.decision ?? "No decision recorded",
+    );
+
+    if (modelAttempt?.summary) {
+      addTextElement(
+        aiReasoningOutput,
+        "p",
+        "repair-summary",
+        modelAttempt.summary,
+      );
+    }
+
+    if (modelAttempt?.root_cause) {
+      addTextElement(
+        aiReasoningOutput,
+        "p",
+        "verification-note",
+        "Proposed root cause: " + modelAttempt.root_cause,
+      );
+    }
+
+    addTextElement(
+      aiReasoningOutput,
+      "p",
+      "mini-label",
+      "REPAIR EXECUTION",
+    );
+
+    addTextElement(
+      aiReasoningOutput,
+      "p",
+      "",
+      "Attempts: " + String(repairCycle.attempt_count ?? attempts.length),
+    );
+
+    addTextElement(
+      aiReasoningOutput,
+      "p",
+      "",
+      "Patch status: " + (modelAttempt?.status ?? repairCycle.status ?? "Unknown"),
+    );
+
+    addTextElement(
+      aiReasoningOutput,
+      "p",
+      "",
+      "Browser verification: " + (repairCycle.verified ? "PASSED" : "NOT VERIFIED"),
+    );
+
+    addTextElement(
+      aiReasoningOutput,
+      "p",
+      "",
+      "Original fixture: " + (repairCycle.original_unchanged ? "UNCHANGED" : "Integrity check failed"),
+    );
+
+    if (repairCycle.patch_diff) {
+      addTextElement(
+        aiReasoningOutput,
+        "p",
+        "mini-label",
+        "PROPOSED PATCH · UNIFIED DIFF",
+      );
+
+      const diff = addTextElement(
+        aiReasoningOutput,
+        "pre",
+        "repair-diff",
+        repairCycle.patch_diff,
+      );
+
+      diff.setAttribute("aria-label", "Repair patch diff");
+    } else {
+      addTextElement(
+        aiReasoningOutput,
+        "p",
+        "verification-note",
+        "No patch diff was produced.",
+      );
+    }
+
+    addTextElement(
+      aiReasoningOutput,
+      "p",
+      "verification-note",
+      "Muse Spark proposes the change. SI ORBIT validates the patch and uses browser execution to assess the result.",
+    );
+
+    aiReasoningOutput.hidden = false;
+
+    const analysisStatus = reasoning.status ?? "not_requested";
+    const analysisMessages = {
+      not_requested: "Additional AI analysis not requested.",
+      blocked_by_safety_gate: "Additional analysis blocked by the server safety gate. No second model request was sent.",
+      unavailable: "Additional AI analysis unavailable. Repair results remain intact.",
+      completed: "Additional AI analysis completed. Suggestions are not proof of a fix.",
+    };
+
+    addTextElement(aiReasoningOutput, "p", "mini-label", "OPTIONAL ADDITIONAL AI ANALYSIS");
+    addTextElement(
+      aiReasoningOutput,
+      "p",
+      "verification-note",
+      analysisMessages[analysisStatus] ??
+        `Additional analysis status: ${analysisStatus}`,
+    );
+
+    if (typeof reasoning.analysis === "string" && reasoning.analysis.trim()) {
+      addTextElement(aiReasoningOutput, "p", "", reasoning.analysis);
+    }
+    if (reasoning.error && analysisStatus !== "blocked_by_safety_gate") {
+      addTextElement(aiReasoningOutput, "p", "verification-note", reasoning.error);
+    }
+    return;
+  }
+
   const status = reasoning.status ?? "not_requested";
 
   const messages = {
@@ -411,8 +549,6 @@ function renderAiReasoning(reasoning = {}) {
 
   aiReasoningStatus.textContent =
     messages[status] ?? `AI reasoning status: ${status}`;
-
-  aiReasoningOutput.replaceChildren();
 
   const analysis = reasoning.analysis;
 
@@ -533,7 +669,75 @@ function renderInvestigation(result) {
       );
     }
 
-    renderAiReasoning(result.ai_reasoning);
+    const diagnosis = result.custom_diagnosis;
+
+    if (diagnosis) {
+      addTextElement(
+        verificationDetails,
+        "h4",
+        "diagnosis-heading",
+        "Muse Spark diagnosis — unverified",
+      );
+
+      addTextElement(
+        verificationDetails,
+        "p",
+        "verification-row",
+        `Decision: ${diagnosis.decision || "Not determined"} · Confidence: ${diagnosis.confidence || "low"}`,
+      );
+
+      if (diagnosis.root_cause) {
+        addTextElement(
+          verificationDetails,
+          "p",
+          "verification-row",
+          `Likely root cause: ${diagnosis.root_cause}`,
+        );
+      }
+
+      if (diagnosis.suggested_fix) {
+        addTextElement(
+          verificationDetails,
+          "p",
+          "verification-row",
+          `Suggested correction: ${diagnosis.suggested_fix}`,
+        );
+      }
+
+      if (diagnosis.replacement_code) {
+        addTextElement(
+          verificationDetails,
+          "h4",
+          "diagnosis-heading",
+          "Proposed replacement code",
+        );
+
+        const codeBlock = document.createElement("pre");
+        codeBlock.className = "diagnosis-code";
+        codeBlock.textContent = diagnosis.replacement_code;
+        verificationDetails.appendChild(codeBlock);
+      }
+
+      if (Array.isArray(diagnosis.test_plan) && diagnosis.test_plan.length) {
+        addTextElement(
+          verificationDetails,
+          "h4",
+          "diagnosis-heading",
+          "Recommended test plan",
+        );
+
+        const testList = document.createElement("ol");
+        testList.className = "diagnosis-test-plan";
+
+        for (const step of diagnosis.test_plan) {
+          addTextElement(testList, "li", "", step);
+        }
+
+        verificationDetails.appendChild(testList);
+      }
+    }
+
+    renderAiReasoning(result.ai_reasoning, null);
   } else {
     reportDescription.textContent = findings.length
       ? findings[0]
@@ -577,7 +781,7 @@ function renderInvestigation(result) {
       : "No hypothesis was returned by the investigation engine.";
 
     renderVerification(fixVerification, report);
-    renderAiReasoning(result.ai_reasoning);
+    renderAiReasoning(result.ai_reasoning, result.repair_cycle);
   }
 
   rawReport.textContent = JSON.stringify(result, null, 2);
@@ -612,10 +816,10 @@ async function runInvestigation() {
         problem_description: problemDescription.value.trim(),
         error_logs: errorLogs.value.trim(),
         source_code: sourceCode.value.trim(),
-        enable_ai_reasoning: false,
+        enable_ai_reasoning: enableAiReasoning.checked,
       }
     : {
-        mode: "checkout",
+        mode: "agent_checkout",
         html_path: null,
         enable_ai_reasoning: enableAiReasoning.checked,
       };
