@@ -201,6 +201,14 @@
             </p>
           </div>
 
+          <label class="ai-reasoning-toggle form-ai-reasoning-toggle" for="enable-ai-reasoning">
+            <input id="enable-ai-reasoning" type="checkbox" name="enable_ai_reasoning">
+            <span>
+              Request additional Muse Spark analysis
+              <small>Optional second model request. Off by default.</small>
+            </span>
+          </label>
+
           <div class="form-divider"></div>
 
           <div class="form-bottom">
@@ -336,23 +344,16 @@
             <div class="result-card-heading">
               <span class="result-card-icon source-icon">✳</span>
               <div>
-                <h3>AI reasoning</h3>
-                <p>Optional model-assisted analysis; not proof of a fix</p>
+                <h3>Muse Spark repair proposal</h3>
+                <p>Model decision, controlled patch, and browser verification</p>
               </div>
             </div>
 
-            <label class="ai-reasoning-toggle" for="enable-ai-reasoning">
-              <input
-                id="enable-ai-reasoning"
-                type="checkbox"
-                name="enable_ai_reasoning"
-              >
-              <span>Request additional AI analysis</span>
-            </label>
+
 
             <p class="ai-reasoning-note">
-              Off by default. Real model inference remains blocked by the
-              server safety gate unless explicitly enabled by the operator.
+              Checkout mode displays the actual Muse Spark repair cycle.
+              Custom evidence analysis remains optional and does not execute code.
             </p>
 
             <div id="ai-reasoning-status" role="status" aria-live="polite">

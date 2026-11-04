@@ -1,4 +1,6 @@
 
+import logging
+import os
 import re
 from pathlib import Path
 from typing import Literal
@@ -10,6 +12,10 @@ from pydantic import BaseModel, Field, model_validator
 
 from app.investigator import investigate_checkout
 from app.reasoning_stage import add_ai_reasoning
+from app.agent.repair_loop import run_repair_cycle
+from app.meta_model_client import diagnose_custom_evidence, propose_repair, MetaModelError
+
+logger = logging.getLogger(__name__)
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -30,7 +36,7 @@ app.mount(
 
 
 class InvestigationRequest(BaseModel):
-    mode: Literal["checkout", "custom_evidence"] = "checkout"
+    mode: Literal["checkout", "agent_checkout", "custom_evidence"] = "checkout"
     html_path: str | None = None
     enable_ai_reasoning: bool = False
 
@@ -272,19 +278,121 @@ def health_check():
 def run_investigation(request: InvestigationRequest):
     try:
         if request.mode == "custom_evidence":
-            return analyze_custom_evidence(request)
+            result = analyze_custom_evidence(request)
+
+            if request.enable_ai_reasoning:
+                if os.getenv("SI_ORBIT_ALLOW_REAL_INFERENCE") != "true":
+                    raise HTTPException(
+                        status_code=503,
+                        detail=(
+                            "Live Muse Spark analysis is disabled. "
+                            "Explicitly enable it in the server configuration."
+                        ),
+                    )
+
+                diagnosis = diagnose_custom_evidence(
+                    problem_description=request.problem_description,
+                    error_logs=request.error_logs,
+                    source_code=request.source_code,
+                    static_analysis=result["source_check"],
+                )
+
+                result["custom_diagnosis"] = diagnosis.model_dump()
+                result["custom_analysis"]["summary"] = diagnosis.summary
+                result["custom_analysis"]["next_steps"] = diagnosis.test_plan
+                result["report"]["hypotheses"] = [diagnosis.root_cause]
+                result["ai_reasoning"] = {
+                    "enabled": True,
+                    "status": "completed",
+                    "analysis": (
+                        diagnosis.summary + "\n\n" + diagnosis.root_cause
+                    ),
+                    "verified": False,
+                }
+
+            return result
+
+        if request.mode == "agent_checkout":
+            if os.getenv("SI_ORBIT_ALLOW_REAL_INFERENCE") != "true":
+                raise HTTPException(
+                    status_code=503,
+                    detail=(
+                        "Live Muse Spark repair is disabled. "
+                        "Explicitly enable it in the server configuration."
+                    ),
+                )
+
+            def meta_provider(**kwargs):
+                return propose_repair(
+                    kwargs["evidence"],
+                    kwargs["source_check"],
+                    source_text=kwargs["source_text"],
+                    attempt=kwargs["attempt"],
+                    previous_attempts=kwargs["previous_attempts"],
+                )
+
+            meta_provider.model_generated = True
+
+            cycle = run_repair_cycle(CHECKOUT_PAGE, meta_provider)
+            evidence = cycle["final_evidence"]
+            verified = cycle["verified"]
+
+            proposal_summaries = [
+                item.get("summary", "")
+                for item in cycle["attempts"]
+                if item.get("summary")
+            ]
+
+            result = {
+                "mode": "checkout",
+                "evidence": evidence,
+                "source_check": cycle["source_check"],
+                "fix_verification": {
+                    "attempted": any(
+                        item.get("status") in {
+                            "patch_applied",
+                            "verified",
+                            "verification_failed",
+                            "patch_rejected",
+                        }
+                        for item in cycle["attempts"]
+                    ),
+                    "passed": verified,
+                    "browser_errors": evidence.get("browser_errors", []),
+                    "message_text": evidence.get("message_text"),
+                    "reason": cycle["reason"],
+                },
+                "report": {
+                    "verified_findings": (
+                        [cycle["reason"]] if verified else []
+                    ),
+                    "hypotheses": proposal_summaries or [cycle["reason"]],
+                },
+                "repair_cycle": cycle,
+            }
+
+            return add_ai_reasoning(
+                result,
+                enabled=request.enable_ai_reasoning,
+            )
 
         result = investigate_checkout(CHECKOUT_PAGE)
-        result = add_ai_reasoning(
+        return add_ai_reasoning(
             result,
             enabled=request.enable_ai_reasoning,
         )
-        return result
 
     except HTTPException:
         raise
+    except MetaModelError as exc:
+        logger.warning("Meta repair request unavailable: %s", type(exc).__name__)
+        raise HTTPException(
+            status_code=503,
+            detail="Meta model inference is unavailable. Check the local API configuration.",
+        ) from exc
     except Exception as exc:
+        logger.exception("Investigation failed")
         raise HTTPException(
             status_code=500,
-            detail=f"Investigation failed: {exc}",
+            detail="Investigation failed. Check the server log for details.",
         ) from exc

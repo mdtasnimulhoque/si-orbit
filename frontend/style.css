@@ -2115,6 +2115,24 @@ a {
   }
 }
 
+
+.form-ai-reasoning-toggle {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 18px 0;
+  line-height: 1.6;
+}
+.form-ai-reasoning-toggle input {
+  flex: 0 0 auto;
+  margin-top: 5px;
+}
+.form-ai-reasoning-toggle small {
+  display: block;
+  margin-top: 3px;
+  opacity: 0.72;
+}
+
 /* SI ORBIT: targeted form and AI reasoning layout fixes */
 .custom-evidence-fields,
 .ai-reasoning-card,
@@ -2215,4 +2233,73 @@ a {
   .ai-reasoning-card.panel {
     padding: 16px;
   }
+}
+
+
+/* SI ORBIT: visible Muse Spark repair-cycle evidence */
+.repair-decision {
+  display: inline-block;
+  padding: 7px 11px;
+  border: 1px solid var(--border-color, currentColor);
+  border-radius: 8px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.repair-summary {
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+
+.ai-reasoning-output .repair-diff {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  padding: 16px;
+  border: 1px solid var(--border-color, currentColor);
+  border-radius: 10px;
+  overflow-x: auto;
+  overflow-y: auto;
+  white-space: pre;
+  overflow-wrap: normal;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.65;
+}
+
+/* SI ORBIT: structured custom evidence diagnosis */
+
+.diagnosis-heading {
+  margin: 8px 0 0;
+  color: #b5e9d2;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.diagnosis-code {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  padding: 13px;
+  color: #b5e9d2;
+  background: #0c1719;
+  border: 1px solid #233b36;
+  border-radius: 8px;
+  font-family: var(--mono);
+  font-size: 11px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.diagnosis-test-plan {
+  margin: 0;
+  padding: 12px 12px 12px 32px;
+  color: #b6c7d9;
+  background: #0c1719;
+  border: 1px solid #233b36;
+  border-radius: 8px;
+  font-size: 11px;
+  line-height: 1.8;
 }

@@ -32,6 +32,7 @@ class FakeHTTPClient:
 def test_missing_configuration_sends_no_request(monkeypatch):
     monkeypatch.delenv("SI_ORBIT_META_ENDPOINT_URL", raising=False)
     monkeypatch.delenv("SI_ORBIT_META_ENDPOINT_TOKEN", raising=False)
+    monkeypatch.delenv("MODEL_API_KEY", raising=False)
     client = FakeHTTPClient(FakeResponse())
 
     with pytest.raises(MetaModelError, match="No request was sent"):
